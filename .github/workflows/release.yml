@@ -4,11 +4,15 @@ on:
   push:
     tags:
       - v*
+    branches:
+      - main
 
 env:
   ELIXIR_OPTS: "--warnings-as-errors"
   ERLC_OPTS: "warnings_as_errors"
   LANG: C.UTF-8
+  AWS_S3_BUCKET: "hex-docs-003-pep"
+  # AWS_S3_BUCKET: "s3.hex.pm"
 
 permissions:
   contents: write
@@ -55,6 +59,8 @@ jobs:
           shasum -a 256 elixir-otp-${{ matrix.otp }}.zip > elixir-otp-${{ matrix.otp }}.zip.sha256sum
           echo "$PWD/bin" >> $GITHUB_PATH
       - name: Upload Pre-built
+        # if: github.ref != 'refs/heads/main'
+        if: github.ref != 'refs/heads/issue-12038'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -85,7 +91,7 @@ jobs:
           make Docs.zip
           shasum -a 1 Docs.zip > Docs.zip.sha1sum
           shasum -a 256 Docs.zip > Docs.zip.sha256sum
-      - name: Upload Docs
+      - name: Upload Docs to github
         if: ${{ matrix.build_docs }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -93,3 +99,22 @@ jobs:
           gh release upload --clobber "${{ github.ref_name }}" \
             Docs.zip \
             Docs.zip.sha{1,256}sum
+      - uses: nimblehq/branch-tag-action@v1
+        id: extract
+      - name: Upload Docs to S3
+        if: ${{ matrix.build_docs }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          version=$(${{ steps.extract.outputs.branch_tag }} | sed -e 's/^v//g' | sed -e 's/\//-/g')
+          for f in doc/*; do
+              if [ -d "$f" ]; then
+                  app=`echo $f | sed s/"doc\/"//`
+                  tar -czf "${app}-${version}.tar.gz" -C "doc/${app}" .
+                  aws s3 cp "${app}-${version}.tar.gz" "s3://${{ env.AWS_S3_BUCKET }}/docs/${app}-${version}.tar.gz" \
+                      --cache-control "public,max-age=3600" \
+                      --metadata "{\"surrogate-key\":\"docs/${app}-${version}\",\"surrogate-control\":\"public,max-age=604800\"}"
+              fi
+          done
