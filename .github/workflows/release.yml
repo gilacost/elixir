@@ -2,14 +2,12 @@ name: Release
 
 on:
   push:
-    # tags:
-    #   - v*
+    tags:
+      - v*
 env:
   ELIXIR_OPTS: "--warnings-as-errors"
   ERLC_OPTS: "warnings_as_errors"
   LANG: C.UTF-8
-  # AWS_S3_BUCKET: "s3.hex.pm"
-  AWS_S3_BUCKET: "hex-docs-003-pep"
 
 permissions:
   contents: write
