@@ -8,6 +8,15 @@ inputs:
   build_docs:
     description: "If docs have to be built or not"
 runs:
+  strategy:
+    fail-fast: true
+    matrix:
+      include:
+        - otp: 24
+          otp_version: 24.3
+        - otp: 25
+          otp_version: 25.0
+          build_docs: build_docs
   using: "composite"
   steps:
     - uses: erlef/setup-beam@v1

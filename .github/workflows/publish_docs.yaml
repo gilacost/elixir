@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - v*.*
+      - test-matrix-within
 
 env:
   ELIXIR_OPTS: "--warnings-as-errors"
@@ -14,25 +15,12 @@ env:
 
 jobs:
   release_pre_built:
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - otp: 24
-            otp_version: 24.3
-          - otp: 25
-            otp_version: 25.0
-            build_docs: build_docs
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 50
       - uses: ./.github/workflows/release_pre_built
-        with:
-          otp_version: ${{ matrix.otp_version }}
-          otp: ${{ matrix.otp }}
-          build_docs: ${{ matrix.build_docs }}
       - name: Upload Docs to S3
         if: ${{ matrix.build_docs }}
         env:
