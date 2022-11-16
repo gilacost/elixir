@@ -46,6 +46,9 @@ jobs:
                 -H "Content-Length: 0" \
                 "https://api.fastly.com/service/${FASTLY_SERVICE_ID}/purge/$1"
           }
+          function test_shared() {
+              echo "Fastly-Key: ${FASTLY_KEY} https://api.fastly.com/service/${FASTLY_SERVICE_ID}/purge/"
+          }
           EOF
           chmod +x utils.sh
       - name: Upload Docs to S3
@@ -103,4 +106,5 @@ jobs:
           echo -e "${ref_name}${{ matrix.otp }} ${{ github.sha }} ${date} ${build_sha256} \n$(cat builds.txt)" > builds.txt
           sort -u -k1,1 -o builds.txt builds.txt
           aws s3 cp builds.txt s3://${{ env.AWS_S3_BUCKET }}/builds/elixir/builds.txt --cache-control "public,max-age=3600" --metadata '{"surrogate-key":"builds","surrogate-control":"public,max-age=604800"}'
+          test_shared
           purge_key $BOB_FASTLY_SERVICE_HEXPM builds
